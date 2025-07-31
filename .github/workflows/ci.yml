@@ -1,0 +1,35 @@
+name: CI Pipeline
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+
+      - name: Run Linter
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Build project
+        run: docker build -t <image_name> .
+
+      - name: Run tests
+        run: |
+          npm test
+          python -m unittest discover tests
+          go test ./tests
+        continue-on-error: false
