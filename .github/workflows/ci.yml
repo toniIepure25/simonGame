@@ -1,0 +1,58 @@
+name: CI Pipeline
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ENVIRONMENT SETUP
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+
+      # DEPENDENCY CACHING
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/*.go') }}
+
+      # LINTING STAGE
+      - name: Run Python Linter
+        run: |
+          pip install flake8
+          flake8 .
+
+      - name: Run Go Linter
+        run: |
+          go get -u golang.org/x/lint/golint
+          golint ./...
+
+      # BUILD STAGE
+      - name: Build Docker image
+        run: docker build -t myapp .
+
+      # TEST STAGE
+      - name: Run Python tests
+        run: |
+          pip install pytest
+          pytest tests/
+
+      - name: Run Go tests
+        run: go test ./tests/
