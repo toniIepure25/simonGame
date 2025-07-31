@@ -9,50 +9,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ENVIRONMENT SETUP
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          python-version: '3.9'
+          node-version: '16'
 
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.18'
-
-      # DEPENDENCY CACHING
-      - name: Cache Python dependencies
+      - name: Cache Node.js modules
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/*.go') }}
+      - name: Run Linter
+        run: npm run lint
+        # QUALITY GATE: Fails on lint violations
 
-      # LINTING STAGE
-      - name: Run Python Linter
-        run: |
-          pip install flake8
-          flake8 .
+      - name: Build project
+        run: docker build .
+        # QUALITY GATE: Fails on build errors
 
-      - name: Run Go Linter
-        run: |
-          go get -u golang.org/x/lint/golint
-          golint ./...
-
-      # BUILD STAGE
-      - name: Build Docker image
-        run: docker build -t myapp .
-
-      # TEST STAGE
-      - name: Run Python tests
-        run: |
-          pip install pytest
-          pytest tests/
-
-      - name: Run Go tests
-        run: go test ./tests/
+      - name: Run tests
+        run: pytest tests/
+        # QUALITY GATE: Fails on test failures
