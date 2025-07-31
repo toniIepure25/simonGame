@@ -25,7 +25,7 @@ jobs:
         continue-on-error: false
 
       - name: Build project
-        run: docker build -t <image_name> .
+        run: docker build -t my-app .
 
       - name: Run tests
         run: |
