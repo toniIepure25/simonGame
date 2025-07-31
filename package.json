@@ -1,0 +1,10 @@
+{
+  "name": "688b2fd4a4fb95c593839532",
+  "version": "1.0.0",
+  "description": "Tests for 688b2fd4a4fb95c593839532",
+  "scripts": {
+    "test": "npm test",
+    "test:ci": "npm test"
+  },
+  "devDependencies": {}
+}
