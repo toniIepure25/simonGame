@@ -1,0 +1,93 @@
+const { exec } = require('child_process');
+const { expect } = require('chai');
+const request = require('supertest');
+const app = require('../src/app'); // Assuming your app is exported from this path
+
+describe('End-to-End Tests for Dockerized Application', () => {
+    let server;
+
+    before((done) => {
+        // Build the Docker image
+        exec('docker build -t myapp:latest .', (err, stdout, stderr) => {
+            if (err) {
+                console.error(`Error building Docker image: ${stderr}`);
+                return done(err);
+            }
+            console.log(stdout);
+            // Run the Docker container
+            exec('docker run -d -p 3000:3000 --name myapp-container myapp:latest', (err) => {
+                if (err) {
+                    console.error(`Error running Docker container: ${stderr}`);
+                    return done(err);
+                }
+                server = app.listen(3000, () => {
+                    console.log('Server is running on port 3000');
+                    done();
+                });
+            });
+        });
+    });
+
+    after((done) => {
+        // Stop and remove the Docker container
+        exec('docker stop myapp-container && docker rm myapp-container', (err) => {
+            if (err) {
+                console.error(`Error stopping Docker container: ${err}`);
+            }
+            done();
+        });
+    });
+
+    it('should return a 200 status for the home route', (done) => {
+        request(server)
+            .get('/')
+            .expect(200)
+            .end((err, res) => {
+                if (err) return done(err);
+                expect(res.text).to.include('Welcome to My App'); // Adjust based on actual response
+                done();
+            });
+    });
+
+    it('should create a new resource and return 201 status', (done) => {
+        request(server)
+            .post('/api/resource')
+            .send({ name: 'Test Resource' })
+            .expect(201)
+            .end((err, res) => {
+                if (err) return done(err);
+                expect(res.body).to.have.property('id');
+                expect(res.body.name).to.equal('Test Resource');
+                done();
+            });
+    });
+
+    it('should return a 404 status for a non-existent route', (done) => {
+        request(server)
+            .get('/api/nonexistent')
+            .expect(404, done);
+    });
+
+    it('should handle edge case for creating a resource with missing fields', (done) => {
+        request(server)
+            .post('/api/resource')
+            .send({}) // Sending an empty object
+            .expect(400) // Assuming the API returns 400 for bad requests
+            .end((err, res) => {
+                if (err) return done(err);
+                expect(res.body).to.have.property('error');
+                done();
+            });
+    });
+
+    it('should return a list of resources', (done) => {
+        request(server)
+            .get('/api/resource')
+            .expect(200)
+            .end((err, res) => {
+                if (err) return done(err);
+                expect(res.body).to.be.an('array');
+                done();
+            });
+    });
+});
