@@ -1,0 +1,86 @@
+const { Builder, By, Key, until } = require('selenium-webdriver');
+const assert = require('assert');
+
+describe('Simon Game End-to-End Tests', function () {
+    let driver;
+
+    // Setup before tests
+    before(async function () {
+        driver = await new Builder().forBrowser('chrome').build();
+        await driver.get('file:///path/to/your/index.html'); // Update with the correct path to your index.html
+    });
+
+    // Teardown after tests
+    after(async function () {
+        await driver.quit();
+    });
+
+    it('should display the initial title', async function () {
+        const title = await driver.findElement(By.id('level-title')).getText();
+        assert.strictEqual(title, 'Press A Key to Start');
+    });
+
+    it('should start the game on key press', async function () {
+        await driver.actions().sendKeys(Key.SPACE).perform(); // Simulate key press to start the game
+        const title = await driver.findElement(By.id('level-title')).getText();
+        assert.strictEqual(title.startsWith('Level'), true); // Check if the title now indicates the level
+    });
+
+    it('should play sound and animate button when clicked', async function () {
+        const button = await driver.findElement(By.id('green'));
+        await button.click();
+
+        // Check if the button has the 'pressed' class
+        const isPressed = await button.getAttribute('class').then(classes => classes.includes('pressed'));
+        assert.strictEqual(isPressed, true);
+    });
+
+    it('should increase level after correct sequence', async function () {
+        await driver.actions().sendKeys(Key.SPACE).perform(); // Start the game
+        const initialLevel = await driver.findElement(By.id('level-title')).getText();
+
+        // Simulate clicking the correct button
+        const button = await driver.findElement(By.id('green'));
+        await button.click();
+
+        // Wait for the next sequence to be displayed
+        await driver.wait(until.elementLocated(By.id('level-title')), 5000);
+        const newLevel = await driver.findElement(By.id('level-title')).getText();
+
+        assert.notStrictEqual(newLevel, initialLevel); // Ensure the level has increased
+    });
+
+    it('should display game over message on wrong answer', async function () {
+        await driver.actions().sendKeys(Key.SPACE).perform(); // Start the game
+        const button = await driver.findElement(By.id('red'));
+        await button.click(); // Click a button to start the game
+
+        // Click the wrong button
+        const wrongButton = await driver.findElement(By.id('blue'));
+        await wrongButton.click();
+
+        // Wait for the game over message
+        await driver.wait(until.elementLocated(By.xpath("//h1[contains(text(), 'Game Over')]")), 5000);
+        const gameOverMessage = await driver.findElement(By.id('level-title')).getText();
+        assert.strictEqual(gameOverMessage, 'Game Over, Press Any Key to Restart!');
+    });
+
+    it('should reset the game after game over', async function () {
+        await driver.actions().sendKeys(Key.SPACE).perform(); // Start the game
+        const button = await driver.findElement(By.id('green'));
+        await button.click(); // Click a button to start the game
+
+        // Click the wrong button to trigger game over
+        const wrongButton = await driver.findElement(By.id('red'));
+        await wrongButton.click();
+
+        // Wait for the game over message
+        await driver.wait(until.elementLocated(By.xpath("//h1[contains(text(), 'Game Over')]")), 5000);
+
+        // Restart the game
+        await driver.actions().sendKeys(Key.SPACE).perform();
+
+        const title = await driver.findElement(By.id('level-title')).getText();
+        assert.strictEqual(title, 'Press A Key to Start'); // Ensure the game has reset
+    });
+});
