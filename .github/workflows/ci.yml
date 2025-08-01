@@ -1,0 +1,47 @@
+name: CI Pipeline
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ENVIRONMENT SETUP
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16' # Specify the Node.js version
+
+      # DEPENDENCY CACHING
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+
+      # LINTING STAGE
+      - name: Configure ESLint
+        run: |
+          npm install eslint --save-dev
+          npx eslint --init
+          # Auto-configured since no linter present
+
+      - name: Run Linter
+        run: npx eslint .
+        # QUALITY GATE: Fails on style violations
+
+      # BUILD STAGE
+      - name: Install dependencies
+        run: npm install
+        # Install project dependencies
+
+      # TEST STAGE
+      - name: Run tests
+        run: npm test
+        # QUALITY GATE: Fails on test failures
+
+      # DEPLOYMENT STAGE (if applicable)
+      # No deployment evidence found, so this section is omitted.
